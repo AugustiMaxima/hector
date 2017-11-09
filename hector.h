@@ -16,7 +16,7 @@ template <class C> struct hector{
     int remove(C&);
     void resize();
     hector<C> filter(std::function<bool (C&)>);
-    template <class S> hector<S> map(std::function<S(C&)>);
+    template <class S> hector<S> map(std::function<S(C&)>,std::function<void(S*)>=NULL);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
     template <class S> S foldl(std::function<S(S,C&)>,S,int=0);
     int length();
@@ -96,7 +96,7 @@ void hector<C>::resize(){
 
 template<class C>
 hector<C> hector<C>::filter(std::function<bool(C&)> f){
-    hector<C> result{0};
+    hector<C> result{0,dtor};
     for(int i=0;i<size;i++){
         if(f(container[i])){
             result.insert(container[i]);
@@ -107,8 +107,8 @@ hector<C> hector<C>::filter(std::function<bool(C&)> f){
 
 template <class C>
 template <class S>
-hector<S> hector<C>::map(std::function<S(C&)> fun){
-    hector<S> result{size};
+hector<S> hector<C>::map(std::function<S(C&)> fun,std::function<void(S*) d>){
+    hector<S> result{size,d};
     for(int i=0;i<size;i++){
         result[i] = fun(container[i]);
     }
