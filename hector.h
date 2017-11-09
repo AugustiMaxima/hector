@@ -19,7 +19,7 @@ template <class C> struct hector{//doubling strategy
     int length();
     void cleanup();
     ~hector();
-};//TODO: filter map fold
+};
 
 template <class C>
 hector<C>::hector(int size,std::function<void (C*)> d):size(size),dtor(d){
