@@ -1,8 +1,11 @@
+#ifndef HECTOR_OF_TROY
+#define HECTOR_OF_TROY
 #include <functional>
 
 // a minimal vector class, none of the clunkiness and none of the mess
-// update: now empowered by higher order functions
-template <class C> struct hector{//doubling strategy
+// uses doubling strategy for insertion time
+// supports higher order functions
+template <class C> struct hector{
     int size;
     int capacity;
     C* container;
@@ -62,19 +65,20 @@ int hector<C>::insert(C& content){
 //unordered array -> O(n) runtime
 template <class C>
 int hector<C>::remove(C& content){
-    bool shift = false;
+    int ix=-1;
     for(int i=0;i<size;i++){
-        if (shift){
+        if (ix!=-1){
             container[i-1] = container[i];
         }
         if(container[i]==content){
-            shift = true;
-            if(dtor==NULL)
+            ix = i;
+            if(dtor!=NULL)
                 dtor(container+i);
         }
     }
     size--;
     resize();
+    return ix;
 }
 
 template <class C>
@@ -141,3 +145,5 @@ template <class C>
 hector<C>::~hector(){
     cleanup();
 }
+
+#endif
