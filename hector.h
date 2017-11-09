@@ -1,6 +1,7 @@
 #include <functional>
 
 // a minimal vector class, none of the clunkiness and none of the mess
+// update: now empowered by higher order functions
 template <class C> struct hector{//doubling strategy
     int size;
     int capacity;
