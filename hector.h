@@ -35,7 +35,7 @@ hector<C>::hector(int size,std::function<void (C*)> d):size(size),dtor(d){
 
 template <class C>
 C& hector<C>::operator[](int i){
-    if(i>size || i<-size){
+    if(i>=size || i<=-size){
         throw "Index out of bound";
     }
     else if(i<0){// a convenient python like reverse element access function
