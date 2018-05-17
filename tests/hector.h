@@ -22,7 +22,7 @@ template <class C> class hector{
     C& operator[](int);
     int insert(C&);
     int remove(C&);
-    void sort(std::function<const int (C&,C&)>);//when the comparison function returns a value less than 0, the sorting algorithm places the first element before the second element
+    void sort(std::function<const int (C&,C&)>);
     hector<C> filter(std::function<const bool (C&)>);
     template <class S> hector<S> map(std::function<S(C&)>,std::function<void(S*)> = NULL,std::function<void(S*,S*)> = NULL);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
