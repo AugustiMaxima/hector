@@ -22,7 +22,8 @@ template <class C> class hector{
     C& operator[](int);
     int insert(C&);
     int remove(C&);
-    hector<C> filter(std::function<bool (C&)>);
+    void sort(std::function<const int (C&,C&)>);
+    hector<C> filter(std::function<const bool (C&)>);
     template <class S> hector<S> map(std::function<S(C&)>,std::function<void(S*)> = NULL,std::function<void(S*,S*)> = NULL);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
     template <class S> S foldl(std::function<S(S,C&)>,S,int=0);
@@ -154,8 +155,51 @@ void hector<C>::resize(){
     container = newcon;
 }
 
+template <class C>
+void heapinsert(hector<C>& A, int n, int ptr, std::function<const int(C&,C&)> cmp){
+    int si = ptr*2 + 1;
+    if(ptr*2+2>n)
+        return ;
+    else if(ptr*2+2<n){
+        if (cmp(A[ptr*2+1], A[ptr*2+2])<0) si++;
+    }
+    if(cmp(A[ptr],A[si])<0){
+        C temp = A[si];
+        A[si] = A[ptr];
+        A[ptr] = temp;
+        return heapinsert(A,n,si,cmp);
+    }
+}
+
+template <class C>
+void heapify(hector<C>& A, int n, std::function<const int(C&,C&)> cmp){
+    C temp;
+    for(int i=n-1;i>0;i--){
+        if(cmp(A[(i-1)/2],A[i])<0){
+            temp = A[(i-1)/2];
+            A[(i-1)/2] = A[i];
+            A[i] = temp;
+            heapinsert(A,n,i,cmp);
+        }
+    }
+}
+
+//heapsort. not stable order.
+//guaranteed runtime of O(nlog(n)) with very little memory overhead
+template<class C> 
+void hector<C>::sort(std::function<const int(C&,C&)> cmp){
+    C temp;
+    heapify(*this,length(),cmp);
+    for(int i=length()-1;i>0;i--){
+	temp = container[i];
+	container[i] = container[0];
+	container[0] = temp;
+	heapinsert(*this,i,0,cmp);
+    }
+}
+
 template<class C>
-hector<C> hector<C>::filter(std::function<bool(C&)> f){
+hector<C> hector<C>::filter(std::function<const bool(C&)> f){
     hector<C> result{0,dtor,cpy};
     for(int i=0;i<size;i++){
         if(f(container[i])){
