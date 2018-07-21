@@ -1,5 +1,5 @@
 #include <iostream>
-#include "hector.h"
+#include "../hector.h"
 
 int main(){
     hector<int> h;
