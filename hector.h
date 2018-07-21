@@ -1,17 +1,19 @@
 #ifndef HECTOR_OF_TROY
 #define HECTOR_OF_TROY
 #include <functional>
+#include <cstring>
 
 // a minimal vector class, none of the clunkiness and none of the mess
 // uses doubling strategy for insertion time
 // supports higher order functions
 template <class C> class hector{
+    bool indicator;
     int size;
     int capacity;
     C* container;
     void cleanup();
     public:
-    hector(int = 0);
+    hector(int = 0,bool = false);
     hector(hector<C>&);
     hector(hector<C>&&);
     hector<C>& operator=(hector<C>&);
@@ -30,9 +32,11 @@ template <class C> class hector{
 };
 
 template <class C>
-hector<C>::hector(int size):size(size){
-    capacity = size? size: 4;
+hector<C>::hector(int size, bool init):size(size),indicator(init){
+    capacity = size? size: 4; 
     container = new C[capacity];
+    if(indicator)
+	memset(container,0,capacity*sizeof(C));
 }
 
 template <class C>
@@ -40,10 +44,12 @@ hector<C>::hector(hector<C>& o):capacity(o.capacity),size(o.size),container(new 
     for(int i=0;i<size;i++){
         container[i]=o.container[i];
     }
+    if(indicator)
+	memset(container+size,0,(capacity-size)*sizeof(C));
 }
 
 template <class C>
-hector<C>::hector(hector<C>&& o):capacity(o.capacity),size(o.size),container(o.container){
+hector<C>::hector(hector<C>&& o):capacity(o.capacity),size(o.size),container(o.container),indicator(o.indicator){
     o.container=NULL;
     o.size=0;
     o.capacity=0;
@@ -55,9 +61,12 @@ hector<C>& hector<C>::operator=(hector<C>& o){
     capacity = o.capacity;
     size = o.size;
     container = new C[capacity];
+    indicator = o.indicator;
     for(int i=0;i<size;i++){
         container[i]=o.container[i];
     }
+    if(indicator)
+	memset(container+size,0,(capacity-size)*sizeof(C));
     return *this;
 }
 
@@ -72,6 +81,7 @@ hector<C>& hector<C>::operator=(hector<C>&& o){
     C* tptr = container;
     container=o.container;
     o.container = tptr;
+    indicator = o.indicator;//no swapping required, indicator doesn't change destructor
     return *this;
 }
 
@@ -92,14 +102,7 @@ int hector<C>::length(){return size;}
 template <class C>
 int hector<C>::insert(C& content){
     if(size==capacity){
-        capacity*=2;
-        C* newcon = new C[capacity];
-        for(int i=0;i<size;i++){
-            newcon[i]=std::move(container[i]);
-	    //implicit r-value copy, may save some time for classes that did implement r-value assignment
-	}
-        delete[] container;
-        container = newcon;
+	resize(capacity*2);
     }
     container[size++]=content;
     return size-1;
@@ -123,7 +126,8 @@ int hector<C>::remove(C& content){
 }
 
 template <class C>
-void hector<C>::resize(int nc){
+void hector<C>::resize(int nc,bool move){
+    int oc = capacity;
     if(nc==0){
 	if(size*4>capacity)
 	    return;
@@ -135,16 +139,19 @@ void hector<C>::resize(int nc){
 	}
 	
     }
+    if(oc==capacity)
+	return;
     C* newcon = new C[capacity];
     for(int i=0;i<size;i++){
         newcon[i] = std::move(container[i]);
     }
-    if(nc>size){
+    if(indicator)
+	memset(newcon+size,0,(capacity-size)*sizeof(C));
+    if(nc>size && move){
 	size = nc;
     }
     delete[] container;
     container = newcon;
-	
 }
 
 template <class C>
