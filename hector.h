@@ -21,7 +21,7 @@ template <class C> class hector{
     C& operator[](int);
     int insert(C&);
     int remove(C&);
-    void resize(int = 0);
+    void resize(int = 0, bool = false, bool = false);
     void sort(std::function<const int (C&,C&)>);//when the comparison function returns a value less than 0, the sorting algorithm places the first element before the second element
     hector<C> filter(std::function<const bool (C&)>);
     template <class S> hector<S> map(std::function<S(C&)>);
@@ -126,7 +126,7 @@ int hector<C>::remove(C& content){
 }
 
 template <class C>
-void hector<C>::resize(int nc,bool move){
+void hector<C>::resize(int nc, bool move, bool safe){
     int oc = capacity;
     if(nc==0){
 	if(size*4>capacity)
@@ -135,18 +135,25 @@ void hector<C>::resize(int nc,bool move){
     }
     else{
 	while(capacity<nc){
-	    capacity*=2;
+	    capacity << 1 ;
 	}
 	
     }
     if(oc==capacity)
 	return;
     C* newcon = new C[capacity];
-    for(int i=0;i<size;i++){
-        newcon[i] = std::move(container[i]);
+   
+    if(safe){//for virtually all cases, memcpy/set will be much faster and safer. Use this if deleting or freeing null causes crashes
+	for(int i=0;i<size;i++){
+	    newcon[i] = std::move(container[i]);
+	}
+    }else{
+	memcpy(container,newcon,size*sizeof(C));
+	memset(container,0,size*sizeof(C));//voids the memory, eliminating side effects
     }
     if(indicator)
-	memset(newcon+size,0,(capacity-size)*sizeof(C));
+	    memset(newcon+size,0,(capacity-size)*sizeof(C));	
+
     if(nc>size && move){
 	size = nc;
     }
