@@ -1,7 +1,7 @@
 #ifndef HECTOR_OF_TROY
 #define HECTOR_OF_TROY
 #include <functional>
-
+#include "hydra.h"
 // a minimal vector class, none of the clunkiness and none of the mess
 // uses doubling strategy for insertion time
 // supports higher order functions
@@ -21,8 +21,8 @@ template <class C> class hector{
     int remove(C&);
     void resize(int = 0, bool = false, bool = false);
     void sort(std::function<const int (C&,C&)>);//when the comparison function returns a value less than 0, the sorting algorithm places the first element before the second element
-    hector<C> filter(std::function<const bool (C&)>);
-    template <class S> hector<S> map(std::function<S(C&)>);
+    hector<C> filter(std::function<const bool (C&)>,bool=true);
+    template <class S> hector<S> map(std::function<S(C&)>,bool=true);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
     template <class S> S foldl(std::function<S(S,C&)>,S,int=0);
     int length();
@@ -119,30 +119,29 @@ template <class C>
 void hector<C>::resize(int nc, bool move, bool safe){
     int oc = capacity;
     if(nc==0){
-	if(size*4>capacity)
-	    return;
-	capacity/=2;
+	    if(size*4>capacity)
+	        return;
+	    capacity/=2;
     }
     else{
-	while(capacity<nc){
-	    capacity << 1 ;
-	}
-	
+	    while(capacity<nc){
+	        capacity = capacity << 1;
+	    }
     }
     if(oc==capacity)
-	return;
+	    return;
     C* newcon = new C[capacity];
     
     if(safe){//for virtually all cases, memcpy/set will be much faster and safer. Use this if deleting or freeing null causes crashes
-	for(int i=0;i<size;i++){
-	    newcon[i] = std::move(container[i]);
-	}	
+	    for(int i=0;i<size;i++){
+	        newcon[i] = std::move(container[i]);
+	    }	
     }else{
-	memcpy(container,newcon,size*sizeof(C));
-	memset(container,0,size*sizeof(C));//voids the memory, eliminating side effects
+	    memcpy(newcon,container,size*sizeof(C));
+	    memset(container,0,size*sizeof(C));//voids the memory, eliminating side effects
     }
     if(nc>size && move){
-	size = nc;
+	    size = nc;
     }
     delete[] container;
     container = newcon;
@@ -191,23 +190,44 @@ void hector<C>::sort(std::function<const int(C&,C&)> cmp){
     }
 }
 
+//frankly, there is no reason to not use the multithreaded version, and its virtually faster in 99% of the cases
+//will make it togglable for now
 template<class C>
-hector<C> hector<C>::filter(std::function<const bool(C&)> f){
+hector<C> hector<C>::filter(std::function<const bool(C&)> f, bool parallel){
     hector<C> result;
-    for(int i=0;i<size;i++){
-        if(f(container[i])){
-            result.insert(container[i]);
+    bool* validator_array = nullptr;
+    if (parallel){
+        validator_array = hydra::parallel_validate(size, container, f);
+    }
+    if (validator_array){
+        for(int i=0;i<size;i++){
+            if(validator_array[i]){
+                result.insert(container[i]);
+            }
+        }
+    }
+    else{
+        for(int i=0;i<size;i++){
+            if(f(container[i])){
+                result.insert(container[i]);
+            }
         }
     }
     return result;
 }
 
+//For cases where transformation functions causes side effects and their order is desired, do not use multithreading
 template <class C>
 template <class S>
-hector<S> hector<C>::map(std::function<S(C&)> fun){
+hector<S> hector<C>::map(std::function<S(C&)> fun, bool parallel){
     hector<S> result{size};
-    for(int i=0;i<size;i++){
-        result[i] = fun(container[i]);
+    if (parallel){
+        hydra::parallel_transform(size, container, result.container, fun);
+    }
+    else{
+        for(int i=0;i<size;i++){
+            result[i] = fun(container[i]);
+        }
     }
     return result;
 }
