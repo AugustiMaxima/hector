@@ -21,8 +21,8 @@ template <class C> class hector{
     int remove(C&);
     void resize(int = 0, bool = false, bool = false);
     void sort(std::function<const int (C&,C&)>);//when the comparison function returns a value less than 0, the sorting algorithm places the first element before the second element
-    hector<C> filter(std::function<const bool (C&)>,bool=true);
-    template <class S> hector<S> map(std::function<S(C&)>,bool=true);
+    hector<C> filter(std::function<const bool (C&)>,int=0,bool=true);
+    template <class S> hector<S> map(std::function<S(C&)>,int=0,bool=true);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
     template <class S> S foldl(std::function<S(S,C&)>,S,int=0);
     int length();
@@ -193,11 +193,11 @@ void hector<C>::sort(std::function<const int(C&,C&)> cmp){
 //frankly, there is no reason to not use the multithreaded version, and its virtually faster in 99% of the cases
 //will make it togglable for now
 template<class C>
-hector<C> hector<C>::filter(std::function<const bool(C&)> f, bool parallel){
+hector<C> hector<C>::filter(std::function<const bool(C&)> f, int threads, bool parallel){
     hector<C> result;
     bool* validator_array = nullptr;
     if (parallel){
-        validator_array = hydra::parallel_validate(size, container, f);
+        validator_array = hydra::parallel_validate(size, container, f, size/threads);
     }
     if (validator_array){
         for(int i=0;i<size;i++){
@@ -219,10 +219,10 @@ hector<C> hector<C>::filter(std::function<const bool(C&)> f, bool parallel){
 //For cases where transformation functions causes side effects and their order is desired, do not use multithreading
 template <class C>
 template <class S>
-hector<S> hector<C>::map(std::function<S(C&)> fun, bool parallel){
+hector<S> hector<C>::map(std::function<S(C&)> fun, int threads, bool parallel){
     hector<S> result{size};
     if (parallel){
-        hydra::parallel_transform(size, container, result.container, fun);
+        hydra::parallel_transform(size, container, result.container, fun, size/threads);
     }
     else{
         for(int i=0;i<size;i++){

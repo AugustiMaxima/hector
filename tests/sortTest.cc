@@ -10,7 +10,7 @@ int main(){
     std::function<int(int&,int&)> cmp = [](int& a, int& b){return a-b;};
     h.sort(cmp);
     std::function<int(int&)> print = [](int& i){std::cout<<i<<std::endl;return 0;};
-    h.map(print, false);
+    h.map(print, 1, false);
     //we are relying on the side effects of the print function
     //multithreading must be disabled
 }
