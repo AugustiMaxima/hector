@@ -2,6 +2,7 @@
 #define HECTOR_OF_TROY
 #include <functional>
 #include "hydra.h"
+#include <cstring>
 // a minimal vector class, none of the clunkiness and none of the mess
 // uses doubling strategy for insertion time
 // supports higher order functions
@@ -21,7 +22,7 @@ template <class C> class hector{
     int remove(C&);
     void resize(int = 0, bool = false, bool = false);
     void sort(std::function<const int (C&,C&)>);//when the comparison function returns a value less than 0, the sorting algorithm places the first element before the second element
-    hector<C> filter(std::function<const bool (C&)>,int=0,bool=true);
+    hector<C> filter(std::function<bool (C&)>,int=0,bool=true);
     template <class S> hector<S> map(std::function<S(C&)>,int=0,bool=true);
     template <class S> S foldr(std::function<S(S,C&)>,S,int=0);
     template <class S> S foldl(std::function<S(S,C&)>,S,int=0);
@@ -131,7 +132,6 @@ void hector<C>::resize(int nc, bool move, bool safe){
     if(oc==capacity)
 	    return;
     C* newcon = new C[capacity];
-    
     if(safe){//for virtually all cases, memcpy/set will be much faster and safer. Use this if deleting or freeing null causes crashes
 	    for(int i=0;i<size;i++){
 	        newcon[i] = std::move(container[i]);
@@ -193,11 +193,11 @@ void hector<C>::sort(std::function<const int(C&,C&)> cmp){
 //frankly, there is no reason to not use the multithreaded version, and its virtually faster in 99% of the cases
 //will make it togglable for now
 template<class C>
-hector<C> hector<C>::filter(std::function<const bool(C&)> f, int threads, bool parallel){
+hector<C> hector<C>::filter(std::function<bool(C&)> f, int threads, bool parallel){
     hector<C> result;
     bool* validator_array = nullptr;
     if (parallel){
-        validator_array = hydra::parallel_validate(size, container, f, size/threads);
+        validator_array = hydra::parallel_validate(size, container, f, threads);
     }
     if (validator_array){
         for(int i=0;i<size;i++){
@@ -222,7 +222,7 @@ template <class S>
 hector<S> hector<C>::map(std::function<S(C&)> fun, int threads, bool parallel){
     hector<S> result{size};
     if (parallel){
-        hydra::parallel_transform(size, container, result.container, fun, size/threads);
+        hydra::parallel_transform(size, container, result.container, fun, threads);
     }
     else{
         for(int i=0;i<size;i++){

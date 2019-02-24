@@ -6,7 +6,7 @@
 
 namespace hydra{
 //thread scheduling has an overhead. If we are reasonably certain about the max number of threads that can execute concurrently, segmenting based on thread count will take advantage of core affinity and deliver the fastest result
-//you can also use this to force multi-threading, i've kept some of the older code for reference, though
+//you can also use this to force multithreading off
 
     template<class C, class S>
     void transform(int length, C* base, S* product, std::function<S(C&)> transformation){
@@ -15,12 +15,19 @@ namespace hydra{
     }
 
     template<class C, class S>
-    void parallel_transform(int length, C* container, S* product, std::function<S(C&)> transformation, int step){
-        int th_count = length%step ? length/step + 1 : length/step;
+    void parallel_transform(int length, C* container, S* product, std::function<S(C&)> transformation, int th_count){
+	if(th_count>length || th_count <= 0)
+	    th_count = length;
         std::thread* threads = new std::thread[th_count];
-        for (int i=0;i<th_count;i++){
-            int th_length = (i+1)*step >length? length - i*step : step;
-            threads[i] = std::thread(transform<C,S>, th_length, container+i, product+i, transformation);
+        int step = length/th_count + 1;
+	int overhead = length%th_count;
+	//distributing the overhead evenly will be optimal for parallelism
+	for (int i=0;i<th_count;i++){
+            if(!overhead--)
+		step--;
+	    threads[i] = std::thread(transform<C,S>, step, container, product, transformation);
+	    container+=step;
+	    product+=step;
         }
         for (int i=0;i<th_count;i++){
             threads[i].join();
@@ -34,20 +41,26 @@ namespace hydra{
     }
 
     template<class C>
-    bool* parallel_validate(int length, C* container, std::function<const bool(C&)> validation, int step){
-        int th_count = length%step ? length/step + 1 : length/step;
+    bool* parallel_validate(int length, C* container, std::function<bool(C&)> validation, int th_count){
+	bool* valid = new bool[length];
+	if(th_count>length || th_count <= 0)
+	    th_count = length;
         std::thread* threads = new std::thread[th_count];
-        bool* validate_array = new bool[th_count];
-        for (int i=0;i<th_count;i++){
-            int th_length = (i+1)*step >length? length - i*step : step;
-            threads[i] = std::thread(validate<C>, th_length, container+i, validate_array+i, validation);
+        int step = length/th_count + 1;
+	int overhead = length%th_count;
+	//distributing the overhead evenly will be optimal for parallelism
+	for (int i=0;i<th_count;i++){
+            if(!overhead--)
+		step--;
+	    threads[i] = std::thread(validate<C>, step, container, valid, validation);
+	    container+=step;
+	    valid+=step;
         }
         for (int i=0;i<th_count;i++){
             threads[i].join();
         }
-        return validate_array;
+	return valid;
     }
-
 }
 
 #endif

@@ -1,6 +1,8 @@
 #include <iostream>
 #include "../hector.h"
 
+//A(somewhat skewed) example of how thread caps improve performance
+
 int fib(const int& n){
     if (n==0 || n==1)
         return 1;
